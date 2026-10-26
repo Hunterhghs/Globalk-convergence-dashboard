@@ -1,0 +1,15 @@
+# ╔══════════════════════════════════════════╗
+# ║  VELES — Fable-5 × DeepSeek Hybrid      ║
+# ║  H Heuristics AI Agent Pipeline          ║
+# ╚══════════════════════════════════════════╝
+# Auto-detects DEEPSEEK_API_KEY from Reasonix environment.
+# When run within Reasonix (the AI agent), Veles operations are
+# performed natively by Reasonix using its own API access.
+# The standalone CLI path requires DEEPSEEK_API_KEY in env.
+
+[fable]
+provider = "deepseek"
+model = "deepseek-chat"
+memory_backend = "sqlite"
+max_iterations = 20
+max_delegations = 8

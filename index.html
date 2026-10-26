@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global Convergence Observatory — H Heuristics</title>
+<meta name="description" content="Interactive world dashboard for global economic convergence: beta & sigma convergence, catch-up half-life, and the Medium Coefficient (D-coefficient). GDP per capita 1990-2023, World Bank data.">
+<meta name="author" content="H Heuristics">
+<meta name="theme-color" content="#070b10">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.basemaps.cartocdn.com; connect-src 'self'">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<style>
+:root{
+  --bg-deep:#070b10; --bg-panel:#0c1219; --bg-card:#111a24; --bg-card-hover:#16222f;
+  --border:#1c2735; --border-light:#2a3850;
+  --text:#dbe4ee; --text-2:#8ba0b8; --text-3:#5b6d81;
+  --gold:#e0b65a; --gold-bright:#f2d48a; --teal:#37c6b4; --coral:#e07060;
+  --green:#3aad6a; --amber:#e0a040; --red:#d94a4a; --blue:#4b9cd3; --slate:#8ba0b8;
+  --radius:8px; --radius-sm:5px;
+  --shadow:0 4px 24px rgba(0,0,0,.5);
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --font-display:'Space Grotesk',var(--font-sans);
+  --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden}
+body{font-family:var(--font-sans);background:var(--bg-deep);color:var(--text);-webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
+
+/* ============ header ============ */
+.header{height:52px;min-height:52px;background:#0a1119;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1rem;z-index:1100;gap:.6rem}
+.header-left{display:flex;align-items:center;gap:.7rem;min-width:0}
+.header-logo{font-family:var(--font-display);font-size:.92rem;font-weight:700;color:var(--gold);letter-spacing:.04em;white-space:nowrap}
+.header-logo .dot{color:var(--teal)}
+.header-divider{width:1px;height:20px;background:var(--border-light);flex-shrink:0}
+.header-subtitle{font-size:.56rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.12em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.header-center{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.header-year{font-family:var(--font-mono);font-size:1.15rem;font-weight:600;color:var(--gold-bright);min-width:52px;text-align:center}
+.header-year-btn{background:var(--bg-card);border:1px solid var(--border);color:var(--text-2);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:.65rem;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.header-year-btn:hover{background:var(--bg-card-hover);color:var(--text);border-color:var(--border-light)}
+.header-play-btn{background:var(--gold);border:none;color:#0a0f16;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:center;font-weight:700;transition:all .15s}
+.header-play-btn:hover{background:var(--gold-bright)}
+.header-play-btn.playing{background:var(--coral);color:#fff}
+.year-slider{width:110px;accent-color:var(--gold);cursor:pointer}
+.header-right{display:flex;align-items:center;gap:.7rem;flex-shrink:0}
+.header-metric-select{background:var(--bg-card);border:1px solid var(--border);color:var(--text-2);padding:.3rem .5rem;border-radius:var(--radius-sm);font-size:.62rem;font-family:var(--font-sans);cursor:pointer;text-transform:uppercase;letter-spacing:.05em;max-width:190px}
+.header-metric-select:hover,.header-metric-select:focus{border-color:var(--gold);color:var(--gold);outline:none}
+.header-badge{background:rgba(224,182,90,.12);color:var(--gold);font-size:.55rem;font-weight:700;padding:.22rem .5rem;border-radius:3px;text-transform:uppercase;letter-spacing:.07em;border:1px solid rgba(224,182,90,.28);white-space:nowrap}
+.header-badge.teal{background:rgba(55,198,180,.12);color:var(--teal);border-color:rgba(55,198,180,.28)}
+.header-icon-btn{background:var(--bg-card);border:1px solid var(--border);color:var(--text-2);width:28px;height:28px;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.7rem;transition:all .15s}
+.header-icon-btn:hover{background:var(--bg-card-hover);color:var(--text)}
+
+/* ============ layout ============ */
+.main{flex:1;position:relative;overflow:hidden}
+#map{width:100%;height:100%;background:var(--bg-deep)}
+
+.sidebar{position:absolute;top:0;left:0;bottom:0;width:330px;background:var(--bg-panel);border-right:1px solid var(--border);z-index:900;display:flex;flex-direction:column;transform:translateX(0);transition:transform .2s;box-shadow:var(--shadow)}
+.sidebar.collapsed{transform:translateX(-330px)}
+.sidebar-toggle{position:absolute;top:12px;left:342px;width:28px;height:28px;background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.75rem;z-index:910;box-shadow:0 2px 8px rgba(0,0,0,.3);transition:all .2s}
+.sidebar.collapsed+.sidebar-toggle{left:12px}
+.sidebar-toggle:hover{background:var(--bg-card-hover);color:var(--text)}
+.sidebar-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:.75rem;scrollbar-width:thin;scrollbar-color:var(--border-light) transparent}
+.sidebar-scroll::-webkit-scrollbar{width:3px}
+.sidebar-scroll::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:3px}
+
+.ledger{position:absolute;top:0;right:0;bottom:0;width:380px;background:var(--bg-panel);border-left:1px solid var(--border);z-index:900;display:flex;flex-direction:column;transform:translateX(0);transition:transform .2s;box-shadow:var(--shadow)}
+.ledger.collapsed{transform:translateX(380px)}
+.ledger-toggle{position:absolute;top:12px;right:392px;width:28px;height:28px;background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;color:var(--text-2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.75rem;z-index:910;box-shadow:0 2px 8px rgba(0,0,0,.3);transition:all .2s}
+.ledger.collapsed+.ledger-toggle{right:12px}
+.ledger-toggle:hover{background:var(--bg-card-hover);color:var(--text)}
+.ledger-head{display:flex;align-items:center;justify-content:space-between;padding:.7rem .8rem;border-bottom:1px solid var(--border);gap:.5rem}
+.ledger-tabs{display:flex;gap:.25rem}
+.ledger-tab{background:none;border:1px solid transparent;color:var(--text-3);font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:.3rem .55rem;border-radius:3px;cursor:pointer;font-family:var(--font-sans)}
+.ledger-tab.active{background:rgba(224,182,90,.12);border-color:rgba(224,182,90,.3);color:var(--gold)}
+.ledger-body{flex:1;overflow-y:auto;overflow-x:hidden;padding:.6rem .7rem;scrollbar-width:thin;scrollbar-color:var(--border-light) transparent}
+.ledger-body::-webkit-scrollbar{width:3px}
+.ledger-body::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:3px}
+
+/* ============ KPI ============ */
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin-bottom:.7rem}
+.kpi-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:.65rem .7rem;transition:all .15s}
+.kpi-card:hover{background:var(--bg-card-hover);border-color:var(--border-light)}
+.kpi-label{font-size:.53rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;font-weight:700;margin-bottom:.25rem;line-height:1.3}
+.kpi-value{font-family:var(--font-mono);font-size:1.05rem;font-weight:600;color:var(--text)}
+.kpi-value.gold{color:var(--gold-bright)}
+.kpi-change{font-size:.56rem;font-weight:600;margin-top:.18rem;font-family:var(--font-mono)}
+.kpi-change.positive{color:var(--green)}.kpi-change.negative{color:var(--coral)}.kpi-change.neutral{color:var(--text-3)}
+
+.section-title{display:flex;align-items:center;gap:.5rem;margin:.2rem 0 .55rem}
+.section-title .st-icon{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 6px rgba(224,182,90,.6)}
+.section-title .st-text{font-size:.6rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.11em}
+.section-divider{height:1px;background:var(--border);margin:.55rem 0}
+
+.chart-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:.65rem .7rem;margin-bottom:.6rem}
+.chart-panel h4{font-size:.58rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:.45rem}
+.chart-wrap{position:relative;height:170px}
+.chart-wrap.tall{height:230px}
+
+/* clubs */
+.club-row{display:flex;align-items:center;justify-content:space-between;padding:.38rem .55rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:.28rem;font-size:.66rem;cursor:pointer;transition:all .15s}
+.club-row:hover{background:var(--bg-card-hover);border-color:var(--border-light)}
+.club-row.active{border-color:var(--gold);background:rgba(224,182,90,.08)}
+.club-left{display:flex;align-items:center;gap:.45rem;min-width:0}
+.club-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.club-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.club-val{font-family:var(--font-mono);font-size:.62rem;color:var(--text-2);white-space:nowrap}
+
+/* selected country card */
+.country-card{background:linear-gradient(135deg, rgba(224,182,90,.10), rgba(55,198,180,.06));border:1px solid rgba(224,182,90,.3);border-radius:var(--radius);padding:.7rem .8rem;margin-bottom:.6rem}
+.country-card .cc-name{font-family:var(--font-display);font-size:.85rem;font-weight:700;color:var(--gold-bright);margin-bottom:.15rem}
+.country-card .cc-region{font-size:.55rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem}
+.cc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem}
+.cc-cell .cc-v{font-family:var(--font-mono);font-size:.72rem;font-weight:600;color:var(--text)}
+.cc-cell .cc-l{font-size:.48rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em}
+
+/* ============ ledger table ============ */
+.search-input{width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:.4rem .55rem;font-size:.68rem;font-family:var(--font-sans);margin-bottom:.5rem}
+.search-input:focus{border-color:var(--gold);outline:none}
+.ledger-table{width:100%;border-collapse:collapse;font-size:.62rem}
+.ledger-table th{position:sticky;top:0;background:var(--bg-panel);color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;font-size:.5rem;font-weight:700;text-align:right;padding:.35rem .3rem;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap}
+.ledger-table th:first-child,.ledger-table td:first-child{text-align:left}
+.ledger-table th.l,.ledger-table td.l{text-align:left}
+.ledger-table th:hover{color:var(--gold)}
+.ledger-table th.sorted{color:var(--gold)}
+.ledger-table td{padding:.32rem .3rem;border-bottom:1px solid rgba(28,39,53,.55);text-align:right;font-family:var(--font-mono);font-size:.58rem;color:var(--text-2);white-space:nowrap}
+.ledger-table td:first-child{font-family:var(--font-sans);font-size:.62rem;color:var(--text)}
+.ledger-table tr{cursor:pointer}
+.ledger-table tr:hover td{background:var(--bg-card-hover)}
+.ledger-table tr.active td{background:rgba(224,182,90,.08)}
+.club-badge{display:inline-block;font-family:var(--font-sans);font-size:.5rem;font-weight:700;padding:.12rem .4rem;border-radius:3px;text-transform:uppercase;letter-spacing:.05em}
+.club-badge.ce{background:rgba(55,198,180,.14);color:var(--teal)}
+.club-badge.lag{background:rgba(224,112,96,.14);color:var(--coral)}
+.club-badge.fo{background:rgba(224,182,90,.14);color:var(--gold)}
+.club-badge.fs{background:rgba(139,160,184,.14);color:var(--slate)}
+
+/* d-rank bars */
+.d-rank-row{display:grid;grid-template-columns:34px 1fr 40px;align-items:center;gap:.4rem;padding:.3rem .4rem;border-bottom:1px solid rgba(28,39,53,.55);font-size:.62rem}
+.d-rank-row .dr-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.d-rank-row .dr-val{font-family:var(--font-mono);font-size:.62rem;color:var(--gold);text-align:right}
+.d-rank-bar{height:6px;background:var(--bg-deep);border-radius:3px;overflow:hidden}
+.d-rank-bar span{display:block;height:100%;background:linear-gradient(to right, var(--teal), var(--gold));border-radius:3px}
+
+.about-text{font-size:.66rem;line-height:1.55;color:var(--text-2)}
+.about-text h5{font-size:.6rem;color:var(--gold);text-transform:uppercase;letter-spacing:.08em;margin:.6rem 0 .25rem;font-family:var(--font-sans)}
+.about-text p{margin-bottom:.4rem}
+.about-text code{font-family:var(--font-mono);font-size:.58rem;color:var(--teal)}
+
+/* ============ legend ============ */
+.legend{position:absolute;bottom:20px;right:12px;background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);padding:.55rem .7rem;z-index:800;box-shadow:var(--shadow);min-width:150px}
+.legend-title{font-size:.55rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem}
+.legend-bar{height:8px;border-radius:4px;background:linear-gradient(to right,#14202c,#2b5a66,#8f8f45,#f2d48a);margin-bottom:.25rem}
+.legend-labels{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.5rem;color:var(--text-2)}
+
+/* ============ leaflet skin ============ */
+.leaflet-container{background:var(--bg-deep)!important;font-family:var(--font-sans)!important}
+.leaflet-control-zoom a{background:var(--bg-panel)!important;color:var(--text)!important;border-color:var(--border)!important}
+.leaflet-control-zoom a:hover{background:var(--bg-card-hover)!important}
+.leaflet-control-attribution{background:rgba(12,20,30,.85)!important;color:var(--text-3)!important;font-size:.5rem!important}
+.leaflet-control-attribution a{color:var(--text-2)!important}
+.leaflet-tooltip{background:var(--bg-panel)!important;border:1px solid var(--border-light)!important;color:var(--text)!important;box-shadow:var(--shadow)!important;border-radius:6px!important;font-size:.62rem!important}
+.leaflet-tooltip-top:before{border-top-color:var(--border-light)!important}
+
+/* status bar */
+.statusbar{position:absolute;bottom:0;left:0;right:0;height:24px;background:rgba(10,17,25,.92);border-top:1px solid var(--border);display:flex;align-items:center;gap:1rem;padding:0 .9rem;z-index:800;font-size:.52rem;color:var(--text-3);letter-spacing:.05em;white-space:nowrap;overflow:hidden}
+.statusbar .sb-item{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.statusbar .sb-strong{color:var(--text-2);font-family:var(--font-mono)}
+
+@media(max-width:1280px){.ledger{width:340px}.ledger.collapsed{transform:translateX(340px)}.ledger-toggle{right:352px}}
+@media(max-width:900px){
+  .sidebar{width:300px}.sidebar.collapsed{transform:translateX(-300px)}.sidebar-toggle{left:312px}
+  .ledger{width:300px}.ledger.collapsed{transform:translateX(300px)}.ledger-toggle{right:312px}
+  .header-subtitle{display:none}.year-slider{width:70px}
+}
+@media(max-width:640px){
+  .sidebar{width:100%}.sidebar.collapsed{transform:translateX(-100%)}.sidebar-toggle{left:calc(100% + 8px)}
+  .ledger{width:100%}.ledger.collapsed{transform:translateX(100%)}.ledger-toggle{right:calc(100% + 8px)}
+  .header-badge{display:none}.header-divider{display:none}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <span class="header-logo">H HEURISTICS<span class="dot">◆</span></span>
+    <span class="header-divider"></span>
+    <span class="header-subtitle">Global Convergence Observatory</span>
+  </div>
+  <div class="header-center">
+    <button class="header-year-btn" id="btnPrev" title="Previous year">◀</button>
+    <span class="header-year" id="yearDisplay">2023</span>
+    <button class="header-year-btn" id="btnNext" title="Next year">▶</button>
+    <button class="header-play-btn" id="btnPlay" title="Play timeline">▶</button>
+    <input type="range" class="year-slider" id="yearSlider" min="1990" max="2023" step="1" value="2023" aria-label="Year">
+  </div>
+  <div class="header-right">
+    <span class="header-badge" id="badgeSigma">σ 1.03</span>
+    <span class="header-badge teal" id="badgeBeta">β 1.8%/yr</span>
+    <select class="header-metric-select" id="mapMetric" aria-label="Map metric">
+      <option value="gdp">GDP per Capita</option>
+      <option value="growth">Growth 1995→2023</option>
+      <option value="d">D-Coefficient</option>
+      <option value="gap">Gap to US Frontier</option>
+    </select>
+    <button class="header-icon-btn" id="ledgerToggle" title="Toggle ledger">▤</button>
+    <button class="header-icon-btn" id="sidebarToggle" title="Toggle sidebar">☰</button>
+  </div>
+</header>
+
+<div class="main">
+  <div id="map"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-scroll">
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <div class="country-card" id="countryCard" style="display:none"></div>
+
+      <div class="chart-panel">
+        <h4>σ-Convergence — dispersion of log income</h4>
+        <div class="chart-wrap"><canvas id="chartSigma"></canvas></div>
+      </div>
+
+      <div class="chart-panel">
+        <h4>β-Convergence — 1995 income vs growth</h4>
+        <div class="chart-wrap tall"><canvas id="chartBeta"></canvas></div>
+      </div>
+
+      <div class="section-title"><span class="st-icon"></span><span class="st-text">Convergence Clubs</span></div>
+      <div id="clubList"></div>
+
+      <div class="section-divider"></div>
+      <div class="about-text" style="font-size:.56rem;color:var(--text-3)">
+        Source: World Bank WDI. GDP per capita in constant 2015 US$. D-coefficient is a simplified Medium Coefficient proxy (electricity, mobile, internet, literacy, urbanization). Click a country for detail.
+      </div>
+    </div>
+  </aside>
+  <button class="sidebar-toggle" id="sidebarToggleBtn" title="Toggle sidebar">☰</button>
+
+  <aside class="ledger" id="ledger">
+    <div class="ledger-head">
+      <div class="ledger-tabs">
+        <button class="ledger-tab active" data-tab="ledger">Ledger</button>
+        <button class="ledger-tab" data-tab="d">D-Coefficient</button>
+        <button class="ledger-tab" data-tab="about">Methodology</button>
+      </div>
+      <span style="font-family:var(--font-mono);font-size:.55rem;color:var(--text-3)" id="ledgerCount"></span>
+    </div>
+    <div class="ledger-body" id="ledgerBody"></div>
+  </aside>
+  <button class="ledger-toggle" id="ledgerToggleBtn" title="Toggle ledger">▤</button>
+
+  <div class="legend" id="legend">
+    <div class="legend-title" id="legendTitle">GDP per Capita</div>
+    <div class="legend-bar" id="legendBar"></div>
+    <div class="legend-labels" id="legendLabels"></div>
+  </div>
+
+  <div class="statusbar" id="statusbar">
+    <span class="sb-item">World Bank WDI · constant 2015 US$</span>
+    <span class="sb-item">β 1995→2023 · <span class="sb-strong" id="sbBeta">—</span></span>
+    <span class="sb-item">half-life <span class="sb-strong" id="sbHalf">—</span></span>
+    <span class="sb-item">global D <span class="sb-strong" id="sbD">—</span></span>
+    <span class="sb-item" style="margin-left:auto" id="sbHover"></span>
+  </div>
+</div>
+
+<script src="data/global-convergence.js"></script>
+<script src="data/world-geo.js"></script>
+<script>
+/* ═══════════════ DATA ═══════════════ */
+const DATA = GLOBAL_CONVERGENCE;
+const WORLD = WORLD_GEOJSON;
+const COUNTRIES = DATA.countries;
+const YEARS = DATA.years;
+const STATS = DATA.stats;
+
+/* ═══════════════ STATE ═══════════════ */
+let currentYear = DATA.t1;
+let metric = 'gdp';
+let selectedIso = null;
+let isPlaying = false;
+let playInterval = null;
+let map, choropleth;
+let charts = {};
+let sortKey = 'growth', sortDir = -1;
+let ledgerTab = 'ledger';
+let searchQuery = '';
+
+const CLUB_STYLE = {
+  'Catch-up engine':      {color:'#37c6b4', label:'Catch-up engine'},
+  'Lagging':              {color:'#e07060', label:'Lagging'},
+  'Frontier outperformer':{color:'#e0b65a', label:'Frontier outperformer'},
+  'Frontier steady':      {color:'#8ba0b8', label:'Frontier steady'},
+};
+
+/* 7-step convergence scale: dark slate → teal → gold */
+const SCALE_COLORS = ['#14202c','#1f3a4e','#2b5a66','#3f7f80','#8f8f45','#cfa94f','#f2d48a'];
+const NO_DATA_COLOR = '#0d141c';
+
+const METRIC_SCALES = {
+  gdp:    {label:'GDP per Capita (constant 2015 US$)', stops:[800,2500,6000,12000,25000,45000,80000], fmt:v=>'$'+fmtNum(v)},
+  growth: {label:'Annual growth 1995→2023 (%)', stops:[-1,0,1,2,3,4,6], fmt:v=>(v>0?'+':'')+v.toFixed(1)+'%'},
+  d:      {label:'D-Coefficient (Medium Coefficient, 0–100)', stops:[25,35,45,55,65,75,85], fmt:v=>v.toFixed(0)+' / 100'},
+  gap:    {label:'GDP per capita, % of US frontier', stops:[5,15,30,50,70,90,105], fmt:v=>v.toFixed(0)+'% of US'},
+};
+
+function fmtNum(v){
+  if(v===null||v===undefined||isNaN(v)) return '—';
+  if(Math.abs(v)>=1000) return Math.round(v).toLocaleString('en-US');
+  if(Math.abs(v)>=100) return v.toFixed(0);
+  return v.toFixed(1);
+}
+function nvl(v){ return (v===null||v===undefined) ? null : v; }
+function fmtMoney(v){
+  if(v===null||v===undefined||isNaN(v)) return '—';
+  if(v>=1000) return '$'+Math.round(v).toLocaleString('en-US');
+  return '$'+v.toFixed(0);
+}
+
+/* ═══════════════ MAP ═══════════════ */
+function initMap(){
+  map = L.map('map', {zoomControl:false, minZoom:2, maxZoom:8, worldCopyJump:true, attributionControl:true});
+  L.control.zoom({position:'bottomleft'}).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains:'abcd', maxZoom:19
+  }).addTo(map);
+  choropleth = L.geoJSON(WORLD, {
+    style:featureStyle,
+    onEachFeature:(feature, layer)=>{
+      layer.on({
+        mouseover:()=>{ layer.setStyle({weight:2, color:'#f2d48a'}); },
+        mouseout:()=>{ layer.setStyle(featureStyle(feature)); },
+        click:()=>selectCountry(isoOf(feature))
+      });
+    }
+  }).addTo(map);
+  map.setView([22,12], 2);
+}
+
+function isoOf(feature){
+  return feature.id || feature.properties.iso_a3 || null;
+}
+
+function metricValue(iso3){
+  const c = COUNTRIES[iso3];
+  if(!c) return null;
+  if(metric==='gdp') return nvl(c.gdp[currentYear]);
+  if(metric==='gap'){
+    const us = (COUNTRIES.USA && COUNTRIES.USA.gdp) ? COUNTRIES.USA.gdp[currentYear] : null;
+    const v = c.gdp[currentYear];
+    return (us && v) ? v/us*100 : null;
+  }
+  if(metric==='growth') return nvl(c.growth);
+  if(metric==='d') return nvl(c.d_coeff);
+  return null;
+}
+
+function colorFor(v){
+  if(v===null||v===undefined) return NO_DATA_COLOR;
+  const {stops} = METRIC_SCALES[metric];
+  for(let i=0;i<stops.length;i++){ if(v<stops[i]) return SCALE_COLORS[i]; }
+  return SCALE_COLORS[SCALE_COLORS.length-1];
+}
+
+function featureStyle(feature){
+  const iso3 = isoOf(feature);
+  const v = metricValue(iso3);
+  const style = {
+    color:'#0a0f16', weight:0.6, fillColor:colorFor(v), fillOpacity:0.9
+  };
+  if(iso3 && selectedIso===iso3){
+    style.weight = 2.2; style.color = '#f2d48a'; style.fillOpacity = 1;
+  }
+  return style;
+}
+
+function tooltipContent(iso3){
+  const c = COUNTRIES[iso3];
+  if(!c) return '<b>No data</b>';
+  const v = metricValue(iso3);
+  const sc = METRIC_SCALES[metric];
+  const yearNote = (metric==='gdp'||metric==='gap') ? ' · '+currentYear : '';
+  return `<b>${c.name}</b><br>${sc.label.split(' (')[0]}: <b style="color:#f2d48a">${v===null?'n/a':sc.fmt(v)}</b>${yearNote}<br><span style="color:#8ba0b8">${c.region||''}${c.region?' · ':''}${c.incomeGroup||''}</span>`;
+}
+
+function refreshMap(){
+  if(!choropleth) return;
+  choropleth.setStyle(featureStyle);
+  choropleth.eachLayer(layer=>{
+    const iso3 = isoOf(layer.feature);
+    if(iso3 && COUNTRIES[iso3]){
+      layer.bindTooltip(tooltipContent(iso3), {sticky:true, direction:'top', offset:[0,-4]});
+    }
+  });
+}
+
+function selectCountry(iso3){
+  if(!iso3 || !COUNTRIES[iso3]) return;
+  selectedIso = iso3;
+  refreshMap();
+  renderCountryCard(iso3);
+  const layer = choropleth.getLayers().find(l=>isoOf(l.feature)===iso3);
+  if(layer){
+    const b = layer.getBounds();
+    if(b.isValid()) map.fitBounds(b, {padding:[40,40], maxZoom:5});
+    layer.openTooltip();
+  }
+  markActiveLedgerRow(iso3);
+}
+
+function fitWorld(){
+  selectedIso = null;
+  map.setView([22,12], 2);
+  refreshMap();
+  renderCountryCard(null);
+}
+
+/* ═══════════════ KPI ═══════════════ */
+function updateKPIs(){
+  const k = STATS.kpis;
+  const grid = document.getElementById('kpiGrid');
+  const sigChange = nvl(k.sigma_change_pct);
+  const sigCls = sigChange===null ? 'neutral' : (sigChange<0 ? 'positive' : 'negative');
+  const cards = [
+    {label:'σ-Convergence', value:k.sigma_2023!=null? k.sigma_2023.toFixed(3) : '—', cls:'gold', change:(sigChange!==null?(sigChange>0?'+':'')+sigChange+'% since 1995':'—'), changeCls:sigCls},
+    {label:'β Speed λ', value:k.beta_speed_pct!==null? k.beta_speed_pct.toFixed(2)+'%/yr' : '—', cls:'', change:'unconditional 1995→2023', changeCls:'neutral'},
+    {label:'Catch-up Half-Life', value:k.half_life_years!==null? k.half_life_years.toFixed(1)+' yrs' : '—', cls:'', change:'ln2 / λ', changeCls:'neutral'},
+    {label:'Global D-Coefficient', value:k.d_global!==null? k.d_global.toFixed(1) : '—', cls:'gold', change:'pop-weighted proxy', changeCls:'neutral'},
+    {label:'Catch-up Engines', value:k.n_converging+' / '+k.n_sample, cls:'', change:'above fitted β line, below median income', changeCls:'positive'},
+    {label:'Lagging Economies', value:k.n_lagging+' / '+k.n_sample, cls:'', change:'below fitted β line, below median income', changeCls:'negative'},
+  ];
+  grid.innerHTML = cards.map(c=>
+    `<div class="kpi-card"><div class="kpi-label">${c.label}</div><div class="kpi-value ${c.cls}">${c.value}</div><div class="kpi-change ${c.changeCls}">${c.change}</div></div>`
+  ).join('');
+
+  document.getElementById('badgeSigma').textContent = 'σ '+(k.sigma_2023!=null? k.sigma_2023.toFixed(3) : '—');
+  document.getElementById('badgeBeta').textContent = 'β '+(k.beta_speed_pct!==null? k.beta_speed_pct.toFixed(1)+'%/yr' : '—');
+  document.getElementById('sbBeta').textContent = k.beta_speed_pct!==null? k.beta_speed_pct.toFixed(2)+'%/yr' : '—';
+  document.getElementById('sbHalf').textContent = k.half_life_years!==null? k.half_life_years.toFixed(0)+' yrs' : '—';
+  document.getElementById('sbD').textContent = k.d_global!==null? k.d_global.toFixed(0)+'/100' : '—';
+}
+
+function renderCountryCard(iso3){
+  const card = document.getElementById('countryCard');
+  if(!iso3 || !COUNTRIES[iso3]){
+    card.style.display='none';
+    return;
+  }
+  const c = COUNTRIES[iso3];
+  card.style.display='block';
+  const g95 = c.gdp['1995'], g23 = c.gdp['2023'];
+  card.innerHTML = `
+    <div class="cc-name">${c.name}</div>
+    <div class="cc-region">${c.region||'—'} · ${c.incomeGroup||'—'}${c.club? ' · <span style="color:'+CLUB_STYLE[c.club].color+'">'+c.club+'</span>' : ''}</div>
+    <div class="cc-grid">
+      <div class="cc-cell"><div class="cc-v">${fmtMoney(g23)}</div><div class="cc-l">GDP pc 2023</div></div>
+      <div class="cc-cell"><div class="cc-v">${c.growth!==null?(c.growth>0?'+':'')+c.growth.toFixed(2)+'%':'—'}</div><div class="cc-l">Growth 95→23</div></div>
+      <div class="cc-cell"><div class="cc-v">${c.d_coeff!==null?c.d_coeff.toFixed(0)+'/100':'—'}</div><div class="cc-l">D-Coeff</div></div>
+      <div class="cc-cell"><div class="cc-v">${fmtMoney(g95)}</div><div class="cc-l">GDP pc 1995</div></div>
+      <div class="cc-cell"><div class="cc-v">${c.gap_2023!==null?c.gap_2023.toFixed(0)+'%':'—'}</div><div class="cc-l">% of US</div></div>
+      <div class="cc-cell"><div class="cc-v">${c.residual!==null?(c.residual>0?'+':'')+c.residual.toFixed(2):'—'}</div><div class="cc-l">β residual</div></div>
+    </div>`;
+}
+
+/* ═══════════════ CHARTS ═══════════════ */
+function chartDefaults(){
+  Chart.defaults.color = '#8ba0b8';
+  Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+  Chart.defaults.font.size = 9;
+}
+
+function initCharts(){
+  chartDefaults();
+
+  // sigma line
+  const sigmaYears = Object.keys(STATS.sigma);
+  const sigmaVals = sigmaYears.map(y=>STATS.sigma[y]);
+  const ctx1 = document.getElementById('chartSigma').getContext('2d');
+  charts.sigma = new Chart(ctx1, {
+    type:'line',
+    data:{labels:sigmaYears, datasets:[
+      {label:'σ (std dev of ln GDP pc)', data:sigmaVals, borderColor:'#e0b65a', backgroundColor:'rgba(224,182,90,.10)', fill:true, tension:.35, pointRadius:0, borderWidth:1.8},
+      {label:'current year', data:[], pointRadius:4, pointBackgroundColor:'#f2d48a', borderColor:'#f2d48a', showLine:false}
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      scales:{
+        y:{title:{display:true,text:'σ'}, grid:{color:'rgba(28,39,53,.6)'}, ticks:{font:{size:8}}},
+        x:{grid:{color:'rgba(28,39,53,.4)'}, ticks:{font:{size:8}, maxTicksLimit:7}}
+      },
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>'σ = '+c.parsed.y.toFixed(3)}}}
+    }
+  });
+
+  // beta scatter
+  const points = Object.entries(COUNTRIES).filter(([iso,c])=>c.ln_y0!==null && c.growth!==null && c.club);
+  const datasets = [];
+  const clubs = Object.keys(CLUB_STYLE);
+  clubs.forEach(club=>{
+    const pts = points.filter(([iso,c])=>c.club===club);
+    datasets.push({
+      label:club, data:pts.map(([iso,c])=>({x:c.ln_y0, y:c.growth, iso})),
+      backgroundColor:CLUB_STYLE[club].color, pointRadius:3, pointHoverRadius:5
+    });
+  });
+  const b = STATS.beta;
+  if(b && b.a!==null && b.b!==null){
+    const xs = points.map(([iso,c])=>c.ln_y0);
+    const xmin = Math.min(...xs), xmax = Math.max(...xs);
+    datasets.push({
+      label:'OLS fit', data:[{x:xmin,y:b.a+b.b*xmin},{x:xmax,y:b.a+b.b*xmax}],
+      type:'line', borderColor:'#f2d48a', borderWidth:1.5, borderDash:[5,4], pointRadius:0, fill:false
+    });
+  }
+  const ctx2 = document.getElementById('chartBeta').getContext('2d');
+  charts.beta = new Chart(ctx2, {
+    type:'scatter',
+    data:{datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      scales:{
+        x:{title:{display:true,text:'ln GDP pc 1995'}, grid:{color:'rgba(28,39,53,.6)'}, ticks:{font:{size:8}}},
+        y:{title:{display:true,text:'growth % / yr'}, grid:{color:'rgba(28,39,53,.6)'}, ticks:{font:{size:8}}}
+      },
+      plugins:{
+        legend:{display:true, position:'bottom', labels:{boxWidth:8, padding:6, font:{size:7.5}}},
+        tooltip:{callbacks:{label:c=>{
+          const iso = c.raw && c.raw.iso; if(!iso) return c.dataset.label;
+          const cc = COUNTRIES[iso];
+          return `${cc.name}: ${cc.growth>0?'+':''}${cc.growth.toFixed(2)}% @ ln=${cc.ln_y0.toFixed(2)}`;
+        }}}
+      }
+    }
+  });
+
+  updateSigmaMarker();
+}
+
+function updateSigmaMarker(){
+  if(!charts.sigma) return;
+  const idx = Object.keys(STATS.sigma).indexOf(String(currentYear));
+  if(idx>=0){
+    charts.sigma.data.datasets[1].data = [{x:idx, y:STATS.sigma[String(currentYear)]}];
+  }else{
+    charts.sigma.data.datasets[1].data = [];
+  }
+  charts.sigma.update('none');
+}
+
+/* ═══════════════ CLUBS ═══════════════ */
+function renderClubs(){
+  const el = document.getElementById('clubList');
+  const byClub = {};
+  Object.entries(COUNTRIES).forEach(([iso,c])=>{
+    if(c.club) (byClub[c.club]=byClub[c.club]||[]).push([iso,c]);
+  });
+  const order = ['Catch-up engine','Lagging','Frontier outperformer','Frontier steady'];
+  el.innerHTML = order.map(club=>{
+    const list = (byClub[club]||[]).sort((a,b)=>Math.abs(b[1].residual)-Math.abs(a[1].residual)).slice(0,5);
+    const st = CLUB_STYLE[club];
+    return `<div style="margin-bottom:.55rem">
+      <div style="display:flex;justify-content:space-between;font-size:.55rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.25rem">
+        <span style="color:${st.color};font-weight:700">${club}</span><span>${(byClub[club]||[]).length} countries</span>
+      </div>
+      ${list.map(([iso,c])=>`
+        <div class="club-row ${selectedIso===iso?'active':''}" data-iso="${iso}">
+          <span class="club-left"><span class="club-dot" style="background:${st.color}"></span><span class="club-name">${c.name}</span></span>
+          <span class="club-val">${c.growth>0?'+':''}${c.growth!=null? c.growth.toFixed(1) : '—'}%</span>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.club-row').forEach(row=>{
+    row.addEventListener('click',()=>selectCountry(row.dataset.iso));
+  });
+}
+
+/* ═══════════════ LEDGER ═══════════════ */
+function cellValue(r, key){
+  if(key==='gdp95') return r.gdp ? nvl(r.gdp['1995']) : null;
+  if(key==='gdp23') return r.gdp ? nvl(r.gdp['2023']) : null;
+  return r[key];
+}
+
+function ledgerRows(){
+  let rows = Object.entries(COUNTRIES).map(([iso,c])=>({iso,...c}));
+  if(searchQuery){
+    const q = searchQuery.toLowerCase();
+    rows = rows.filter(r=>r.name.toLowerCase().includes(q) || r.iso.toLowerCase().includes(q) || (r.region||'').toLowerCase().includes(q));
+  }
+  rows.sort((a,b)=>{
+    const av = cellValue(a, sortKey), bv = cellValue(b, sortKey);
+    if(av===null||av===undefined) return 1;
+    if(bv===null||bv===undefined) return -1;
+    if(typeof av==='string') return av.localeCompare(bv)*sortDir;
+    return (av-bv)*sortDir;
+  });
+  return rows;
+}
+
+function clubBadge(club){
+  const map = {'Catch-up engine':'ce','Lagging':'lag','Frontier outperformer':'fo','Frontier steady':'fs'};
+  return `<span class="club-badge ${map[club]||'fs'}">${club||'—'}</span>`;
+}
+
+function renderLedger(){
+  const body = document.getElementById('ledgerBody');
+  document.getElementById('ledgerCount').textContent = ledgerRows().length+' / '+Object.keys(COUNTRIES).length;
+
+  if(ledgerTab==='about'){ renderAbout(body); return; }
+  if(ledgerTab==='d'){ renderDRank(body); return; }
+
+  const cols = [
+    {key:'name', label:'Country', cls:'l'},
+    {key:'region', label:'Region', cls:'l'},
+    {key:'gdp', label:'GDP 95', fmt:c=>fmtMoney(c.gdp['1995']), sortKey:'gdp95'},
+    {key:'gdp', label:'GDP 23', fmt:c=>fmtMoney(c.gdp['2023']), sortKey:'gdp23'},
+    {key:'growth', label:'Growth', fmt:c=>(c.growth!==null?(c.growth>0?'+':'')+c.growth.toFixed(2)+'%':'—')},
+    {key:'d_coeff', label:'D', fmt:c=>c.d_coeff!==null?c.d_coeff.toFixed(0):'—'},
+    {key:'club', label:'Club', fmt:c=>clubBadge(c.club)},
+  ];
+  const rows = ledgerRows();
+  const sortedKey = sortKey;
+  body.innerHTML = `
+    <input class="search-input" id="ledgerSearch" placeholder="Search country / region…" value="${searchQuery.replace(/"/g,'&quot;')}">
+    <table class="ledger-table">
+      <thead><tr>${cols.map(col=>{
+        const k = col.sortKey||col.key;
+        const left = col.cls==='l' ? 'l' : '';
+        return `<th class="${left} ${sortedKey===k?'sorted':''}" data-sort="${k}">${col.label}${sortedKey===k?(sortDir>0?' ▲':' ▼'):''}</th>`;
+      }).join('')}</tr></thead>
+      <tbody>
+        ${rows.map(r=>`
+          <tr data-iso="${r.iso}" class="${selectedIso===r.iso?'active':''}">
+            <td>${r.name}</td>
+            <td class="l" style="font-family:var(--font-sans);color:var(--text-3)">${r.region||'—'}</td>
+            <td>${fmtMoney(r.gdp['1995'])}</td>
+            <td>${fmtMoney(r.gdp['2023'])}</td>
+            <td style="color:${r.growth>0?'var(--teal)':'var(--coral)'}">${r.growth!==null?(r.growth>0?'+':'')+r.growth.toFixed(2)+'%':'—'}</td>
+            <td>${r.d_coeff!==null?r.d_coeff.toFixed(0):'—'}</td>
+            <td>${clubBadge(r.club)}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+  body.querySelectorAll('th[data-sort]').forEach(th=>{
+    th.addEventListener('click',()=>{
+      const k = th.dataset.sort;
+      if(sortKey===k){ sortDir*=-1; } else { sortKey=k; sortDir = (k==='name'||k==='region')?1:-1; }
+      renderLedger();
+    });
+  });
+  body.querySelectorAll('tbody tr').forEach(tr=>{
+    tr.addEventListener('click',()=>selectCountry(tr.dataset.iso));
+  });
+  const search = document.getElementById('ledgerSearch');
+  if(search){
+    search.addEventListener('input',()=>{ searchQuery=search.value; renderLedger(); search.focus(); search.setSelectionRange(search.value.length, search.value.length); });
+    search.focus(); search.setSelectionRange(search.value.length, search.value.length);
+  }
+}
+
+function renderDRank(body){
+  const rows = Object.entries(COUNTRIES).map(([iso,c])=>({iso,...c})).filter(c=>c.d_coeff!==null).sort((a,b)=>b.d_coeff-a.d_coeff);
+  const top = rows.slice(0,12), bottom = rows.slice(-8).reverse();
+  const rowHtml = (r)=>{
+    return `<div class="d-rank-row" data-iso="${r.iso}">
+      <span style="color:var(--text-3);font-family:var(--font-mono)">${r.iso}</span>
+      <span class="dr-name">${r.name}</span>
+      <span class="dr-val">${r.d_coeff.toFixed(0)}</span>
+      <span class="d-rank-bar" style="grid-column:2/4"><span style="width:${r.d_coeff}%"></span></span>
+    </div>`;
+  };
+  body.innerHTML = `<div class="section-title"><span class="st-icon"></span><span class="st-text">Highest Medium Coefficient</span></div>
+    ${top.map(rowHtml).join('')}
+    <div class="section-divider"></div>
+    <div class="section-title"><span class="st-icon" style="background:var(--coral)"></span><span class="st-text">Lowest Medium Coefficient</span></div>
+    ${bottom.map(rowHtml).join('')}`;
+  body.querySelectorAll('.d-rank-row').forEach(r=>{
+    r.addEventListener('click',()=>selectCountry(r.dataset.iso));
+  });
+}
+
+function renderAbout(body){
+  body.innerHTML = `<div class="about-text">
+    <h5>What this dashboard measures</h5>
+    <p><b style="color:var(--gold)">σ-convergence</b> — the cross-country standard deviation of the natural log of GDP per capita. Falling σ means the world income distribution is compressing: countries are becoming more alike.</p>
+    <p><b style="color:var(--gold)">β-convergence</b> — an OLS regression of annualized growth (1995→2023) on the log of initial income. A negative slope means poorer countries grow faster on average. The implied speed <code>λ = −ln(1+b·T)/T</code> and the catch-up half-life <code>ln2/λ</code> summarize how fast the gap closes.</p>
+    <p><b style="color:var(--gold)">D-coefficient (Medium Coefficient)</b> — H Heuristics' diffusion-capacity metric, 0–100. Here computed as a simplified proxy from World Bank observables: infrastructure (electricity, mobile), human capital (literacy), information (internet), and geography (urbanization). Weights follow the digital-era profile of the Veles D-Coefficient Engine, renormalised over the four observable components.</p>
+    <p><b style="color:var(--gold)">Convergence clubs</b> — a 2×2 of initial income (above/below the sample median) against the β-regression residual (growing faster/slower than fitted). "Catch-up engines" are poor and beating the fitted line; "lagging" are poor and below it.</p>
+    <h5>Data & method notes</h5>
+    <p>GDP per capita: <code>NY.GDP.PCAP.KD</code> (constant 2015 US$), population: <code>SP.POP.TOTL</code>, plus <code>EG.ELC.ACCS.ZS</code>, <code>IT.NET.USER.ZS</code>, <code>IT.CEL.SETS.P2</code>, <code>SE.ADT.LITR.ZS</code>, <code>SP.URB.TOTL.IN.ZS</code> — World Bank World Development Indicators, via <code>api.worldbank.org</code>.</p>
+    <p>Unconditional β-convergence over 1995–2023; σ computed on the panel of countries with data in each year (n ≥ 60). Gaps use the United States as the frontier. The D-coefficient proxy is a cross-section (latest available year), not a time series.</p>
+    <p style="color:var(--text-3)">Built with the Veles pipeline (Fable-5 × DeepSeek) · H Heuristics · ${DATA.meta.last_updated}</p>
+  </div>`;
+}
+
+function markActiveLedgerRow(iso3){
+  document.querySelectorAll('#ledgerBody tr[data-iso], #ledgerBody .d-rank-row[data-iso]').forEach(el=>{
+    el.classList.toggle('active', el.dataset.iso===iso3);
+  });
+}
+
+/* ═══════════════ LEGEND ═══════════════ */
+function updateLegend(){
+  const sc = METRIC_SCALES[metric];
+  document.getElementById('legendTitle').textContent = sc.label;
+  document.getElementById('legendBar').style.background = 'linear-gradient(to right,'+SCALE_COLORS.join(',')+')';
+  const labels = ['< '+sc.fmt(sc.stops[0])];
+  for(let i=0;i<sc.stops.length-1;i++){
+    labels.push(sc.fmt(sc.stops[i])+' – '+sc.fmt(sc.stops[i+1]));
+  }
+  labels.push('≥ '+sc.fmt(sc.stops[sc.stops.length-1]));
+  document.getElementById('legendLabels').innerHTML = `<span>${labels[0]}</span><span>${labels[labels.length-1]}</span>`;
+}
+
+/* ═══════════════ UPDATE ALL ═══════════════ */
+function updateAll(){
+  document.getElementById('yearDisplay').textContent = currentYear;
+  document.getElementById('yearSlider').value = currentYear;
+  refreshMap();
+  updateKPIs();
+  updateSigmaMarker();
+  updateLegend();
+  renderClubs();
+  renderLedger();
+  const c = selectedIso ? COUNTRIES[selectedIso] : null;
+  document.getElementById('sbHover').textContent = c ? c.name+' · '+fmtMoney(c.gdp ? c.gdp[currentYear] : null)+' (GDP pc '+currentYear+')' : '';
+}
+
+/* ═══════════════ CONTROLS ═══════════════ */
+function setYear(y){
+  currentYear = String(y);
+  updateAll();
+}
+function stepYear(d){
+  const y = Math.min(2023, Math.max(1990, parseInt(currentYear)+d));
+  setYear(y);
+}
+function togglePlay(){
+  isPlaying = !isPlaying;
+  const btn = document.getElementById('btnPlay');
+  btn.textContent = isPlaying ? '❚❚' : '▶';
+  btn.classList.toggle('playing', isPlaying);
+  if(isPlaying){
+    playInterval = setInterval(()=>{
+      let y = parseInt(currentYear)+1;
+      if(y>2023) y=1990;
+      setYear(y);
+    }, 650);
+  }else{
+    clearInterval(playInterval);
+  }
+}
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('collapsed');
+}
+function toggleLedger(){
+  document.getElementById('ledger').classList.toggle('collapsed');
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden && isPlaying) togglePlay();
+});
+
+function setupControls(){
+  document.getElementById('btnPrev').addEventListener('click', ()=>stepYear(-1));
+  document.getElementById('btnNext').addEventListener('click', ()=>stepYear(1));
+  document.getElementById('btnPlay').addEventListener('click', togglePlay);
+  document.getElementById('yearSlider').addEventListener('input', e=>setYear(e.target.value));
+  document.getElementById('mapMetric').addEventListener('change', e=>{ metric=e.target.value; updateAll(); });
+
+  document.getElementById('sidebarToggleBtn').addEventListener('click', toggleSidebar);
+  document.getElementById('ledgerToggleBtn').addEventListener('click', toggleLedger);
+  document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
+  document.getElementById('ledgerToggle').addEventListener('click', toggleLedger);
+  document.querySelectorAll('.ledger-tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      ledgerTab = tab.dataset.tab;
+      document.querySelectorAll('.ledger-tab').forEach(t=>t.classList.toggle('active', t===tab));
+      renderLedger();
+    });
+  });
+  document.getElementById('map').addEventListener('dblclick', fitWorld);
+  window.addEventListener('keydown', e=>{
+    if(e.key==='ArrowLeft') stepYear(-1);
+    if(e.key==='ArrowRight') stepYear(1);
+    if(e.key===' ') { e.preventDefault(); togglePlay(); }
+  });
+}
+
+/* ═══════════════ BOOT ═══════════════ */
+document.addEventListener('DOMContentLoaded', ()=>{
+  initMap();
+  initCharts();
+  updateAll();
+  setupControls();
+});
+</script>
+</body>
+</html>
